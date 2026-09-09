@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}{{ dossier.reference_odoo }} · EckoX Admin{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'orders:dossier_list' %}">← Retour aux dossiers</a>
+<div class="page-heading"><div><p class="eyebrow">Dossier administratif</p><h1>{{ dossier.reference_odoo }}</h1><p class="muted">{{ dossier.nom_client }}</p></div>{% if perms.orders.change_dossieradministratif %}<a class="button" href="{% url 'orders:dossier_update' dossier.pk %}">Modifier le dossier</a>{% endif %}</div>
+<section class="card padded"><h2>Informations du dossier</h2><dl class="details"><div><dt>Référence de commande Odoo</dt><dd>{{ dossier.reference_odoo }}</dd></div><div><dt>Nom du client</dt><dd>{{ dossier.nom_client }}</dd></div><div><dt>Statut</dt><dd>{{ dossier.statut }}</dd></div><div><dt>Transporteur</dt><dd>{{ dossier.transporteur|default:"Non renseigné" }}</dd></div></dl><h2>Observations</h2><div class="observations">{{ dossier.observations|default:"Aucune observation."|linebreaksbr }}</div></section>
+<section class="card padded trace"><h2>Traçabilité</h2><dl class="details"><div><dt>Création</dt><dd>{{ dossier.created_at|date:"d/m/Y à H:i" }}<br>{{ dossier.created_by.get_full_name|default:dossier.created_by.username }}</dd></div><div><dt>Dernière modification</dt><dd>{{ dossier.updated_at|date:"d/m/Y à H:i" }}<br>{{ dossier.updated_by.get_full_name|default:dossier.updated_by.username }}</dd></div></dl></section>
+{% endblock %}

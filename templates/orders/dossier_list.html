@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Dossiers administratifs · EckoX Admin{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Suivi administratif</p><h1>Dossiers administratifs</h1><p class="muted">Les dossiers associés aux commandes clients Odoo.</p></div>
+{% if perms.orders.add_dossieradministratif %}<a class="button" href="{% url 'orders:dossier_create' %}">Créer un dossier</a>{% endif %}</div>
+<section class="card" aria-label="Liste des dossiers">
+{% if dossiers %}<div class="table-wrap"><table><thead><tr><th scope="col">Référence Odoo</th><th scope="col">Client</th><th scope="col">Statut</th><th scope="col">Transporteur</th><th scope="col">Actions</th></tr></thead>
+<tbody>{% for dossier in dossiers %}<tr><td><a class="reference" href="{% url 'orders:dossier_detail' dossier.pk %}">{{ dossier.reference_odoo }}</a></td><td>{{ dossier.nom_client }}</td><td><span class="status">{{ dossier.statut }}</span></td><td>{{ dossier.transporteur|default:"—" }}</td><td><a href="{% url 'orders:dossier_detail' dossier.pk %}">Consulter<span class="sr-only"> {{ dossier.reference_odoo }}</span></a>{% if perms.orders.change_dossieradministratif %}<a class="action-link" href="{% url 'orders:dossier_update' dossier.pk %}">Modifier<span class="sr-only"> {{ dossier.reference_odoo }}</span></a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}<div class="empty"><h2>Aucun dossier pour le moment</h2><p class="muted">Les dossiers créés apparaîtront ici.</p></div>{% endif %}
+</section>
+{% endblock %}

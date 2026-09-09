@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EckoX Admin{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/eckox.css' %}">
+</head>
+<body>
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+<header class="site-header"><div class="header-inner">
+  <span class="brand">Ecko<span>X</span> <small>ADMIN</small></span>
+  {% if user.is_authenticated %}
+  <nav aria-label="Navigation principale">{% if perms.orders.view_dossieradministratif %}<a href="{% url 'orders:dossier_list' %}">Dossiers administratifs</a>{% endif %}{% if perms.orders.view_commandefournisseur %}<a class="action-link" href="{% url 'orders:commande_list' %}">Commandes fournisseurs</a>{% endif %}{% if perms.receptions.view_reception %}<a class="action-link" href="{% url 'receptions:list' %}">Réceptions</a>{% endif %}</nav>
+  <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+  {% endif %}
+</div></header>
+<main id="contenu" class="container">{% block content %}{% endblock %}</main>
+</body>
+</html>

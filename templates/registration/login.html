@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Connexion · EckoX Admin{% endblock %}
+{% block content %}
+<section class="card padded login-card"><p class="eyebrow">Espace interne</p><h1>Connexion</h1><p class="muted">Connectez-vous avec votre compte EckoX.</p>
+<form method="post">{% csrf_token %}
+{% if form.errors %}<div class="error-summary" role="alert">{% if form.non_field_errors %}{{ form.non_field_errors }}{% else %}Veuillez renseigner les champs ci-dessous.{% endif %}</div>{% endif %}
+{% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+<input type="hidden" name="next" value="{{ next }}"><button class="button" type="submit">Se connecter</button>
+</form></section>
+{% endblock %}
