@@ -164,6 +164,25 @@ class ReceptionPageTests(TestCase):
         self.assertEqual(Reception.objects.count(),1)
         self.assertFalse(Document.objects.exists())
         self.assertFalse(any(f.is_file() for f in Path(self.temp.name).rglob("*")))
+        self.assertIsNone(response.context["view"].object)
+        self.assertIsNone(response.context["form"].instance.pk)
+        self.assertContains(response, "Créer une réception")
+        self.assertNotContains(response, "Modifier la réception")
+        self.assertNotContains(response, 'href="/receptions/2/"')
+        self.assertContains(response, 'value="REC2"')
+        self.assertEqual(self.client.post(self.urls[2], self.payload).status_code, 302)
+
+    def test_failed_update_keeps_existing_detail_link(self):
+        self.client.force_login(self.user)
+        with patch("documents.models.Document.save", side_effect=IntegrityError("test")):
+            response = self.client.post(self.urls[3], {**self.payload, "photo": self.photo()})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Modifier la réception")
+        self.assertContains(response, 'href="' + self.urls[1] + '"')
+        self.reception.refresh_from_db()
+        self.assertEqual(self.reception.reference, "REC1")
+        self.assertFalse(Document.objects.exists())
+
 
     def test_missing_or_unrelated_document(self):
         self.client.force_login(self.user)

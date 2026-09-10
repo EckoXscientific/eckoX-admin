@@ -27,6 +27,20 @@ class DossierDetailView(DossierAccessMixin, DetailView):
         return super().get_queryset().select_related("created_by", "updated_by")
 
 
+    def get_context_data(self, **kwargs):
+        from receptions.models import Reception
+        from invoices.models import FactureFournisseur
+
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        dossier = self.object
+        context["commandes_liees"] = dossier.commandes_fournisseurs.select_related("fournisseur").order_by("-date", "-pk") if user.has_perm("orders.view_commandefournisseur") else ()
+        context["receptions_liees"] = Reception.objects.filter(dossier=dossier).select_related("fournisseur", "receptionne_par").order_by("-date_reception", "-pk") if user.has_perm("receptions.view_reception") else ()
+        context["factures_liees"] = FactureFournisseur.objects.filter(dossier=dossier).select_related("fournisseur").order_by("-date_facture", "-pk") if user.has_perm("invoices.view_facturefournisseur") else ()
+        context["documents_directs"] = dossier.documents.order_by("nom", "pk") if user.has_perm("documents.view_document") else ()
+        return context
+
+
 class DossierSaveMixin:
     form_class = DossierForm
     template_name = "orders/dossier_form.html"

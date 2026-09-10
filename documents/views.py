@@ -28,3 +28,27 @@ class ReceptionPhotoView(LoginRequiredMixin, PermissionRequiredMixin, View):
         response["X-Content-Type-Options"] = "nosniff"
         response["Content-Security-Policy"] = "default-src 'none'; sandbox"
         return response
+
+
+class FacturePDFView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    login_url = "login"
+    permission_required = ("documents.view_document", "invoices.view_facturefournisseur")
+
+    def get(self, request, pk):
+        document = get_object_or_404(Document, pk=pk, categorie="Facture fournisseur PDF", facture_fournisseur__isnull=False)
+        stream = None
+        try:
+            stream = document.fichier.open("rb")
+            if stream.read(5) != b"%PDF-":
+                stream.close()
+                raise Http404("PDF indisponible")
+            stream.seek(0)
+        except OSError:
+            if stream:
+                stream.close()
+            raise Http404("PDF indisponible")
+        response = FileResponse(stream, content_type="application/pdf", filename=document.nom)
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+        return response

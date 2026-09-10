@@ -49,6 +49,7 @@ class ReceptionSaveMixin:
 
     def form_valid(self, form):
         document = None
+        creating = form.instance._state.adding
         try:
             with transaction.atomic():
                 self.object = form.save(commit=False)
@@ -63,6 +64,10 @@ class ReceptionSaveMixin:
             if document and document.fichier and document.fichier._committed:
                 document.fichier.delete(save=False)
             if isinstance(error, (ValidationError, IntegrityError, OSError)):
+                if creating:
+                    form.instance.pk = None
+                    form.instance._state.adding = True
+                    self.object = None
                 form.add_error(None, "La réception n’a pas été enregistrée. Vérifiez les informations et réessayez.")
                 return self.form_invalid(form)
             raise

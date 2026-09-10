@@ -21,6 +21,7 @@ from django.contrib.auth.views import LoginView
 from users.forms import ConnexionForm
 
 urlpatterns = [
+    path("factures-fournisseurs/", include("invoices.urls")),
     path("receptions/", include("receptions.urls")),
     path("documents/", include("documents.urls")),
     path("connexion/", LoginView.as_view(template_name="registration/login.html", authentication_form=ConnexionForm, next_page="orders:dossier_list"), name="login"),

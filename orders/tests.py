@@ -260,3 +260,72 @@ class CommandePageTests(TestCase):
             self.assertEqual(secure_client.post(url, self.payload).status_code, 403)
         self.order.delete()
         self.assertContains(self.client.get(self.urls[0]), "Aucune commande pour le moment")
+
+
+from documents.models import Document
+
+
+class DossierOverviewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="overview")
+        self.user.groups.add(Group.objects.get(name="Utilisateur interne"))
+        self.dossier = self.make(DossierAdministratif, reference_odoo="SO-OVERVIEW", nom_client="Client", statut="En cours")
+        self.other = self.make(DossierAdministratif, reference_odoo="SO-OTHER", nom_client="Autre", statut="En cours")
+        self.supplier = self.make(Fournisseur, nom="Fournisseur")
+        for dossier, suffix in ((self.dossier,"LINKED"),(self.other,"OTHER")):
+            order = self.make(CommandeFournisseur, numero="PO-"+suffix, fournisseur=self.supplier, dossier=dossier, date=date(2026,9,10))
+            self.make(Reception, reference="REC-"+suffix, fournisseur=self.supplier, dossier=dossier, date_reception=timezone.now(), receptionne_par=self.user, etat_colis="Bon", statut="Reçu")
+            self.make(FactureFournisseur, numero="INV-"+suffix, fournisseur=self.supplier, dossier=dossier, date_facture=date(2026,9,10), montant=10)
+            self.make(Document, nom="DOC-"+suffix, categorie="Export", dossier=dossier, fichier="demo.pdf")
+            self.make(Document, nom="INDIRECT-"+suffix, categorie="Bon de commande", commande=order, fichier="indirect.pdf")
+        self.url=reverse("orders:dossier_detail",args=[self.dossier.pk])
+
+    def make(self,model,**values):
+        obj=model(**values); obj.save(user=self.user); return obj
+
+    def test_only_direct_links_and_detail_urls(self):
+        self.client.force_login(self.user)
+        response=self.client.get(self.url)
+        self.assertEqual(response.status_code,200)
+        for prefix in ("PO-","REC-","INV-","DOC-"):
+            self.assertContains(response,prefix+"LINKED")
+            self.assertNotContains(response,prefix+"OTHER")
+        self.assertNotContains(response,"INDIRECT-")
+        self.assertContains(response,reverse("orders:commande_detail",args=[CommandeFournisseur.objects.get(numero="PO-LINKED").pk]))
+        self.assertContains(response,reverse("receptions:detail",args=[Reception.objects.get(reference="REC-LINKED").pk]))
+        self.assertContains(response,reverse("invoices:detail",args=[FactureFournisseur.objects.get(numero="INV-LINKED").pk]))
+
+    def test_permissions_hide_sections_and_data(self):
+        reader=get_user_model().objects.create_user(username="reader")
+        reader.user_permissions.add(Permission.objects.get(codename="view_dossieradministratif"))
+        self.client.force_login(reader)
+        response=self.client.get(self.url)
+        for heading in ("Commandes fournisseurs liées","Réceptions liées","Factures fournisseurs liées","Documents du dossier"):
+            self.assertNotContains(response,heading)
+        for prefix in ("PO-","REC-","INV-","DOC-"):
+            self.assertNotContains(response,prefix+"LINKED")
+        for key in ("commandes_liees","receptions_liees","factures_liees","documents_directs"):
+            self.assertEqual(response.context[key],())
+
+    def test_each_permission_independently(self):
+        for permission,visible in (("view_commandefournisseur","PO-"),("view_reception","REC-"),("view_facturefournisseur","INV-"),("view_document","DOC-")):
+            reader=get_user_model().objects.create_user(username=permission)
+            reader.user_permissions.add(Permission.objects.get(codename="view_dossieradministratif"),Permission.objects.get(codename=permission))
+            self.client.force_login(reader)
+            response=self.client.get(self.url)
+            for prefix in ("PO-","REC-","INV-","DOC-"):
+                if prefix==visible: self.assertContains(response,prefix+"LINKED")
+                else: self.assertNotContains(response,prefix+"LINKED")
+
+    def test_empty_sections(self):
+        empty=self.make(DossierAdministratif,reference_odoo="SO-EMPTY",nom_client="Vide",statut="Libre")
+        self.client.force_login(self.user)
+        response=self.client.get(reverse("orders:dossier_detail",args=[empty.pk]))
+        for text in ("Aucune commande fournisseur liée","Aucune réception liée","Aucune facture fournisseur liée","Aucun document directement rattaché"):
+            self.assertContains(response,text)
+
+    def test_read_does_not_modify_audit(self):
+        before=(self.dossier.created_at,self.dossier.updated_at,self.dossier.updated_by_id)
+        self.client.force_login(self.user); self.client.get(self.url)
+        self.dossier.refresh_from_db()
+        self.assertEqual(before,(self.dossier.created_at,self.dossier.updated_at,self.dossier.updated_by_id))
